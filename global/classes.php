@@ -1,5 +1,5 @@
 <?php
-class helloworld {
+class classes {
     function sayHello() {
         return "Hello, ICS C Community!";
     }
@@ -7,7 +7,3 @@ class helloworld {
         return date("Y/m/d");
     }
 }
-//create instance
-$hello = new helloworld();
-print $hello->sayHello();
-print $hello->today();
