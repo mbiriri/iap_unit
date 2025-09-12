@@ -2,7 +2,7 @@
 class forms {
     public function signup() {
 ?>
-    <form method="post" action="">
+    <form method="post" action="process_signup.php">
         <label for="username">Username:</label>
         <input type="text" id="username" name="username" required>
         <br><br>
