@@ -3,10 +3,13 @@
 require_once 'conf.php';
 
 // Define autoload directories
-$directories = ["forms", "layout", "global", "mail", "database"];
+$directories = ["forms", "layout", "global", "mail", "database", "proc"];
 
 // Register autoloader with debugging
 spl_autoload_register(function ($className) use ($directories) {
+    // Convert className to match filename convention (sendMail -> sendMail.php)
+    $className = str_replace('\\', '/', $className);
+    
     foreach ($directories as $directory) {
         $filePath = __DIR__ . "/$directory/" . $className . '.php';
         if (file_exists($filePath)) {
@@ -16,9 +19,12 @@ spl_autoload_register(function ($className) use ($directories) {
     }
     
     // Check if it's a PHPMailer class
-    if (strpos($className, 'PHPMailer\\') === 0) {
-        require 'plugins/PHPMailer/vendor/autoload.php';
-        return;
+    if (strpos($className, 'PHPMailer') === 0) {
+        $phpmailerPath = __DIR__ . '/plugins/PHPMailer/vendor/autoload.php';
+        if (file_exists($phpmailerPath)) {
+            require_once $phpmailerPath;
+            return;
+        }
     }
     
     // Debug: Log if class not found
@@ -31,12 +37,17 @@ function getDatabase() {
     static $database = null;
     
     if ($database === null && class_exists('Database')) {
-        $database = new Database(
-            $conf['db_host'], 
-            $conf['db_user'], 
-            $conf['db_pass'], 
-            $conf['db_name']
-        );
+        try {
+            $database = new Database(
+                $conf['db_host'], 
+                $conf['db_user'], 
+                $conf['db_pass'], 
+                $conf['db_name']
+            );
+        } catch (Exception $e) {
+            error_log("Database connection failed: " . $e->getMessage());
+            $database = false;
+        }
     }
     
     return $database;
@@ -48,39 +59,44 @@ function getMailHandler() {
     
     if ($mailHandler === null && class_exists('MailHandler')) {
         $mailHandler = new MailHandler($conf);
-    } else {
-        // Debug: Log if MailHandler class doesn't exist
-        if (!class_exists('MailHandler')) {
-            error_log("MailHandler class does not exist. Check file location.");
-        }
     }
     
     return $mailHandler;
 }
 
-function getForms() {
-    static $form = null;
+function getSendMail() {
+    global $conf;
+    static $sendMail = null;
     
-    if ($form === null && class_exists('forms')) {
-        $form = new forms();
+    if ($sendMail === null && class_exists('sendMail')) {
+        $sendMail = new sendMail();
     }
     
-    return $form;
+    return $sendMail;
 }
 
-function getLayout() {
-    static $layout = null;
-    
-    if ($layout === null && class_exists('layout')) {
-        $layout = new layout();
-    }
-    
-    return $layout;
-}
-
-// Create global references (but don't instantiate if classes don't exist)
+// Create global references
 $database = getDatabase();
-$mailHandler = getMailHandler(); // This is line 29 that's causing the error
-$form = getForms();
-$layout = getLayout();
+$mailHandler = getMailHandler();
+$ObjSendMail = getSendMail();
+
+// Only instantiate these if the classes exist
+$ObjForms = class_exists('forms') ? new forms() : null;
+$ObjLayout = class_exists('layout') ? new layout() : null;
+$ObjFncs = class_exists('fncs') ? new fncs() : null;
+
+// Initialize auth only if database exists
+$ObjAuth = null;
+if (class_exists('auth') && $database) {
+    $ObjAuth = new auth($database);
+    
+    // Only call signup if we have all required dependencies
+    if ($ObjAuth && $ObjFncs && $ObjSendMail) {
+        $ObjAuth->signup($conf, $ObjFncs, $ObjSendMail);
+    }
+}
+
+// Create aliases for consistency (some scripts use different variable names)
+$OBJLayout = $ObjLayout;
+$OBJsendMail = $ObjSendMail;
 ?>

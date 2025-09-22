@@ -1,5 +1,4 @@
 <?php
-// Include the ClassAutoLoad Method
 require_once 'ClassAutoLoad.php';
 
 // Check if required objects exist
@@ -10,6 +9,6 @@ if (!$ObjLayout || !$ObjForms || !$ObjFncs) {
 $ObjLayout->header($conf);
 $ObjLayout->navbar($conf);
 $ObjLayout->banner($conf);
-$ObjLayout->form_content($conf, $ObjForms, $ObjFncs); // Fixed variable name and added parameters
+$ObjLayout->form_content($conf, $ObjForms, $ObjFncs); // Added the missing parameters
 $ObjLayout->footer($conf);
-?><?php
+?>
